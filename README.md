@@ -37,6 +37,11 @@ ManualOrder = 102, 101
 
 `[캐릭터 목록]`은 선택창에서 확인된 ID와 이름으로 갱신됩니다. 모드가 상세정보에서 본명까지 확인하면 괄호 안에 추가합니다.
 
+## 1.1.0 정렬과 언어 설정
+정렬 버튼은 기본 → 자리 → 역할 → 사용자 → 수동 순서로 전환합니다. 사용자 지정과 수동 순서가 비어 있으면 해당 모드를 건너뜁니다.
+Mode = Default는 선택창에 처음 진입했을 때의 게임 순서를 복원합니다.
+[일반]의 Language는 Auto, Korean, English, Japanese, SimplifiedChinese, TraditionalChinese를 지원합니다. Auto는 화면 텍스트를 통해 한글패치를 포함한 게임 표시 언어를 감지합니다.
+
 ## 소스 빌드
 
 .NET SDK와 BepInEx 6 IL2CPP가 설치된 게임 폴더가 필요합니다. BepInEx로 게임을 한 번 실행해 `BepInEx/interop`을 생성한 뒤 아래 명령을 실행하세요. 경로는 실제 게임 폴더로 바꾸면 됩니다.
@@ -47,7 +52,3 @@ dotnet build AstralParty.CharacterSelect.csproj -c Release "-p:GameDir=C:/Games/
 
 빌드 결과는 `bin/Release/net6.0/AstralParty_CharacterSelect.dll`에 생성됩니다. Steam 국제판 게임 UI 구조를 사용하므로, 게임 업데이트 후에는 상세정보 탭과 매치 선택창 동작을 확인해 주세요.
 
-## 1.1.0 정렬과 언어 설정
-정렬 버튼은 기본 → 자리 → 역할 → 사용자 → 수동 순서로 전환합니다. 사용자 지정과 수동 순서가 비어 있으면 해당 모드를 건너뜁니다.
-Mode = Default는 선택창에 처음 진입했을 때의 게임 순서를 복원합니다.
-[일반]의 Language는 Auto, Korean, English, Japanese, SimplifiedChinese, TraditionalChinese를 지원합니다. Auto는 화면 텍스트를 통해 한글패치를 포함한 게임 표시 언어를 감지합니다.
