@@ -23,8 +23,12 @@ internal sealed class HeroTags
         }
     }
 
-    public int[] Sort(IEnumerable<int> gameOrder, IReadOnlyList<HeroTag> priorities) =>
-        gameOrder.OrderBy(heroId => Priority(heroId, priorities)).ToArray();
+    public int[] Sort(IEnumerable<int> gameOrder, IReadOnlyList<HeroTag> priorities)
+    {
+        var roster = gameOrder.ToArray();
+        var colors = ColorSlots(roster, priorities);
+        return roster.OrderBy(id => colors.TryGetValue(id, out var slot) ? slot : Priority(id, priorities)).ToArray();
+    }
 
     public Dictionary<int, int> ColorSlots(IReadOnlyList<int> roster, IReadOnlyList<HeroTag> priorities)
     {

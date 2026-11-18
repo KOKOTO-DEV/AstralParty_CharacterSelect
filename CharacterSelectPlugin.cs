@@ -13,7 +13,7 @@ using UnityEngine.EventSystems;
 
 namespace AstralPartyHeroGroups;
 
-[BepInPlugin(CharacterSelectPlugin.PluginId, "Astral Party Character Select", "1.0.0")]
+[BepInPlugin(CharacterSelectPlugin.PluginId, "Astral Party Character Select", "1.1.0")]
 public sealed class CharacterSelectPlugin : BasePlugin
 {
     private Harmony? harmony;
@@ -80,7 +80,7 @@ internal sealed unsafe partial class PanelObserver
     private static int SelectionButtonCount => GroupNames.Length + 2;
     private static int RandomButtonIndex => GroupNames.Length;
     private static int SortButtonIndex => GroupNames.Length + 1;
-    private enum SortMode { Seat, Role, Custom, Manual }
+    private enum SortMode { Seat, Role, Custom, Manual, Default }
     private static readonly HeroTag[] SeatOrder = Enum.GetValues<HeroTag>();
     private static readonly HeroTag[] RoleOrder = SeatOrder.Skip(4).Concat(SeatOrder.Take(4)).ToArray();
 
@@ -95,11 +95,13 @@ internal sealed unsafe partial class PanelObserver
                 "캐릭터 ID를 쉼표로 구분해 입력합니다.");
         tagLabels = BindTagLabels(config);
         sortMode = config.Bind("정렬", "Mode", SortMode.Seat,
-            "Seat = 자리 우선, Role = 역할 우선, Custom = 태그 순서 지정, Manual = 캐릭터 순서 지정");
-        customOrder = config.Bind("정렬", "CustomOrder", string.Join(", ", TagKeys),
+            "Default = 게임 기본 순서, Seat = 자리 우선, Role = 역할 우선, Custom = 태그 순서 지정, Manual = 캐릭터 순서 지정");
+        customOrder = config.Bind("정렬", "CustomOrder", "",
             "태그 키 또는 표시 이름을 쉼표로 구분합니다. 빠진 태그는 기본 순서로 뒤에 붙습니다.");
         manualOrder = config.Bind("정렬", "ManualOrder", "",
             "Mode = Manual일 때 캐릭터 ID를 쉼표로 구분해 입력합니다. 빠진 캐릭터는 게임 순서로 뒤에 붙습니다.");
+        languageSetting = config.Bind("일반", "Language", UiLanguage.Auto,
+            "Auto follows displayed game text, including Korean patches. Select a language to override.");
     }
 
     private static ConfigEntry<string>[] BindTagLabels(ConfigFile config)
@@ -151,6 +153,8 @@ internal sealed unsafe partial class PanelObserver
         IntPtr manager = IntPtr.Zero;
         IL2CPP.il2cpp_field_static_get_value(field, &manager);
         var panel = Call(manager, "get_currentPanel");
+        DetectLanguage(panel);
+        if (!ModeAvailable(sortMode.Value)) sortMode.Value = SortMode.Seat;
         if (ClassName(panel) == "HeroPanel")
         {
             observedPanel = IntPtr.Zero;
@@ -193,9 +197,12 @@ internal sealed unsafe partial class PanelObserver
         var settings = new HeroTags(tags);
         var priorities = SortPriorities();
         var originalOrder = rows.Keys.OrderBy(id => originalIndex[id]);
-        var order = sortMode.Value == SortMode.Manual
-            ? ManualHeroOrder(originalOrder)
-            : settings.Sort(originalOrder, priorities);
+        var order = sortMode.Value switch
+        {
+            SortMode.Default => originalOrder.ToArray(),
+            SortMode.Manual => ManualHeroOrder(originalOrder),
+            _ => settings.Sort(originalOrder, priorities)
+        };
         var virtualList = BoolValue(ReadField(list, "_virtual"));
         var listMatches = virtualList ? IntValue(Call(list, "get_numItems")) == size
             : IntValue(Call(list, "get_numChildren")) >= size;
@@ -253,13 +260,9 @@ internal sealed unsafe partial class PanelObserver
         if (local.x - button * buttonWidth >= buttonWidth - selectionButtonGap) return;
         if (button == SortButtonIndex)
         {
-            sortMode.Value = sortMode.Value switch
-            {
-                SortMode.Seat => SortMode.Role,
-                SortMode.Role => SortMode.Custom,
-                SortMode.Custom => SortMode.Manual,
-                _ => SortMode.Seat
-            };
+            var modes = new[] { SortMode.Default, SortMode.Seat, SortMode.Role, SortMode.Custom, SortMode.Manual }
+                .Where(ModeAvailable).ToArray();
+            sortMode.Value = modes[(Array.IndexOf(modes, sortMode.Value) + 1) % modes.Length];
             UpdateSortLabel();
             nextPoll = 0;
             return;
@@ -279,20 +282,15 @@ internal sealed unsafe partial class PanelObserver
     private string SelectionButtonLabel(int index)
     {
         if (index < GroupNames.Length) return TagLabel(index);
-        if (index == RandomButtonIndex) return RandomLabel;
-        return sortMode.Value switch
-        {
-            SortMode.Role => "정렬 · 역할",
-            SortMode.Custom => "정렬 · 사용자",
-            SortMode.Manual => "정렬 · 수동",
-            _ => "정렬 · 자리"
-        };
+        if (index == RandomButtonIndex) return Localized(4);
+        return Localized(5) + " · " + Localized(6 + (int)sortMode.Value);
     }
 
     private string TagLabel(int index)
     {
         var label = tagLabels[index].Value.Trim();
-        return label.Length == 0 ? GroupNames[index] : label;
+        return label.Length == 0 || label == GroupNames[index]
+            ? (index < 4 ? GroupNames[index] : Localized(index - 4)) : label;
     }
 
     private IReadOnlyList<HeroTag> SortPriorities()
