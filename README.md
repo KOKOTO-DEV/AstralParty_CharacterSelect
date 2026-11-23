@@ -1,4 +1,4 @@
-# Astral Party Character Select 1.1.0
+# Astral Party Character Select 1.2.0
 
 Steam판 아스트랄 파티의 캐릭터 선택창에서 캐릭터를 태그로 분류하고 정렬하거나 무작위로 선택하는 BepInEx 플러그인입니다.
 
