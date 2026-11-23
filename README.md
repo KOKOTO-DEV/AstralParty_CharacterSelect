@@ -36,9 +36,6 @@ Steam판 아스트랄 파티의 캐릭터 선택창에서 캐릭터를 태그로
 - [광기 맵별 추천·제외 근거](docs/MapRecommendations.ko.md)
 - [조건 추천 알고리즘, 점수와 긴급 판정](docs/RecommendationAlgorithm.ko.md)
 
-
-<img width="482" height="365" alt="image" src="https://github.com/user-attachments/assets/647d4618-50f6-42be-8db6-4691500f2ec8" /><br />
-- 캐릭터 상세정보 왼쪽의 태그를 클릭해 원하는 태그를 여러 개 지정합니다.
   
 <img width="963" height="555" alt="image" src="https://github.com/user-attachments/assets/d922be6d-d662-47bb-ba2f-bfd8b892d85f" /><br />
 - 매치 선택창에서 태그 버튼을 누르면 해당 그룹에서 한 명을 선택합니다. `랜덤`은 태그가 하나라도 달린 선택 가능 캐릭터 전체에서 뽑습니다. 최종 확정은 게임의 확인 버튼으로 합니다.
