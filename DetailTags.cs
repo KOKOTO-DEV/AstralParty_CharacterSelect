@@ -13,6 +13,7 @@ internal sealed unsafe partial class PanelObserver
     private const float TabHeight = 34f;
     private const float TabStep = 39f;
     private const float TabInsetFromTitle = 58f;
+    private const float TabLift = 52f;
     private readonly IntPtr[] detailGraphs = new IntPtr[8];
     private int detailHero;
     private int loggedDetailHero;
@@ -59,13 +60,15 @@ internal sealed unsafe partial class PanelObserver
             var profilePoint = PositionIn(root, profile);
             var titlePoint = PositionIn(root, nameLabel);
             var x = Math.Max(0, Math.Min(profilePoint.x, titlePoint.x) - TabWidth - TabInsetFromTitle);
-            var y = Math.Clamp(Math.Max(profilePoint.y, titlePoint.y), 0,
-                Math.Max(0, FloatValue(Call(root, "get_height")) - TabStep * groups.Length));
+            var y = Math.Clamp(Math.Max(profilePoint.y, titlePoint.y) - TabLift, 0,
+                Math.Max(0, FloatValue(Call(root, "get_height")) - TabStep * (groups.Length + 2)));
             CreateDetailTabs(root, nameLabel, x, y);
             activeRoot = root;
             detailMask = -1;
         }
+        if (detailHero != hero) CloseCombinationEditor();
         detailHero = hero;
+        if (!clicked) RefreshDraftPortraits(root, nameLabel, hero);
         if (loggedDetailHero != hero)
         {
             RememberFullHeroName(hero, TextValue(Call(nameLabel, "get_text", optional: true)));
@@ -76,11 +79,13 @@ internal sealed unsafe partial class PanelObserver
         {
             var mouse = Input.mousePosition;
             var local = TransformPoint(container, "GlobalToLocal", new Vector2(mouse.x, Screen.height - mouse.y));
-            if (local.x >= 0 && local.x < TabWidth && local.y >= 0 && local.y < TabStep * groups.Length)
+            if (HandleCombinationClick(local, root, nameLabel, hero)) return;
+            if (local.x >= 0 && local.x < TabWidth && local.y >= 2 * TabStep && local.y < TabStep * (groups.Length + 2))
             {
                 var tab = (int)(local.y / TabStep);
                 if (local.y - tab * TabStep < TabHeight)
                 {
+                    tab -= 2;
                     var ids = ReadGroup(tab);
                     var enabled = !ids.Remove(hero);
                     if (enabled) ids.Add(hero);
@@ -156,32 +161,16 @@ internal sealed unsafe partial class PanelObserver
         var handle = IL2CPP.il2cpp_gchandle_new(host, false);
         try
         {
-            FloatPair(host, "SetSize", TabWidth, TabStep * groups.Length);
+            FloatPair(host, "SetSize", TabWidth, TabStep * (groups.Length + 2));
             FloatPair(host, "SetXY", x, y);
             var sourceStyle = Call(nameLabel, "get_textFormat", optional: true);
-            for (var tab = 0; tab < groups.Length; tab++)
+            for (var slot = 0; slot < groups.Length + 2; slot++)
             {
-                var graph = Create(graphClass);
-                AddChild(host, graph);
-                FloatPair(graph, "SetSize", TabWidth, TabHeight);
-                FloatPair(graph, "SetXY", 0, tab * TabStep);
-                detailGraphs[tab] = graph;
-
-                var label = Create(textClass);
-                AddChild(host, label);
-                CenterLabel(label);
-                FloatPair(label, "SetSize", TabWidth, TabHeight);
-                FloatPair(label, "SetXY", 0, tab * TabStep);
-                byte touchable = 0;
-                void* touch = &touchable;
-                Exact(label, "set_touchable", "System.Boolean", &touch);
-                var format = Call(label, "get_textFormat");
-                CopyFont(sourceStyle, format);
-                SetIntField(format, "size", 18);
-                void* style = (void*)format;
-                Exact(label, "set_textFormat", "FairyGUI.TextFormat", &style);
-                void* title = (void*)IL2CPP.ManagedStringToIl2Cpp(TagLabel(tab));
-                Exact(label, "set_text", "System.String", &title);
+                var graph = AddDetailButton(host, sourceStyle, TabWidth, slot * TabStep,
+                    slot == 0 ? ConditionEditLabel() : slot == 1 ? ConditionSettingsLabel() : TagLabel(slot - 2), false,
+                    symmetric: slot < 2, fillOverride: slot == 0 ? new Color(0.54f, 0.79f, 1f)
+                        : slot == 1 ? new Color(0.65f, 0.88f, 0.97f) : null);
+                if (slot >= 2) detailGraphs[slot - 2] = graph;
             }
             AddChild(root, host);
             container = host;
@@ -202,13 +191,16 @@ internal sealed unsafe partial class PanelObserver
         if (font != IntPtr.Zero) IL2CPP.il2cpp_field_set_value(destination, field, (void*)font);
     }
 
-    private static void PaintTab(IntPtr graph, bool enabled)
+    private static void PaintTab(IntPtr graph, bool enabled, bool excluded = false, bool symmetric = false,
+        Color? fillOverride = null)
     {
         var lineSize = 2f;
         var line = new Color(0.13f, 0.15f, 0.20f);
-        var fill = enabled ? new Color(0.57f, 0.98f, 0.00f) : new Color(1f, 0.31f, 0.67f);
+        var fill = fillOverride ?? (excluded ? new Color(0.63f, 0.65f, 0.69f)
+            : enabled ? new Color(0.57f, 0.98f, 0.00f)
+            : symmetric ? new Color(0.88f, 0.81f, 0.98f) : new Color(1f, 0.31f, 0.67f));
         var leftRadius = 9f;
-        var rightRadius = 3f;
+        var rightRadius = symmetric ? leftRadius : 3f;
         void** draw = stackalloc void*[7] { &lineSize, &line, &fill,
             &leftRadius, &rightRadius, &leftRadius, &rightRadius };
         Exact(Call(graph, "get_shape"), "DrawRoundRect",

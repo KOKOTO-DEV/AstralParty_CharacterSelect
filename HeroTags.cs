@@ -13,6 +13,10 @@ internal sealed class HeroTags
 {
     private readonly Dictionary<int, HashSet<HeroTag>> tagsByHero = new();
 
+    public bool HasTag(int id) => tagsByHero.ContainsKey(id);
+    public bool HasTag(int id, HeroTag tag) =>
+        tagsByHero.TryGetValue(id, out var assigned) && assigned.Contains(tag);
+
     public HeroTags(IEnumerable<(int HeroId, HeroTag Tag)> tags)
     {
         foreach (var (heroId, tag) in tags)

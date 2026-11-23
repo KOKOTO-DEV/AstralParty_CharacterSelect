@@ -2,11 +2,12 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>AstralParty_CharacterSelect</AssemblyName>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Setup/**/*.cs" />
     <Reference Include="$(GameDir)/BepInEx/core/BepInEx.Core.dll" Private="false" />
     <Reference Include="$(GameDir)/BepInEx/core/BepInEx.Unity.IL2CPP.dll" Private="false" />
     <Reference Include="$(GameDir)/BepInEx/core/Il2CppInterop.Runtime.dll" Private="false" />
@@ -15,6 +16,8 @@
     <Reference Include="$(GameDir)/BepInEx/interop/UnityEngine.InputLegacyModule.dll" Private="false" />
     <Reference Include="$(GameDir)/BepInEx/interop/UnityEngine.CoreModule.dll" Private="false" />
     <Reference Include="$(GameDir)/BepInEx/interop/Il2Cppmscorlib.dll" Private="false" />
+    <Reference Include="$(GameDir)/BepInEx/interop/Unity.Addressables.dll" Private="false" />
+    <Reference Include="$(GameDir)/BepInEx/interop/Unity.ResourceManager.dll" Private="false" />
   </ItemGroup>
   <Target Name="ValidateGameDirectory" BeforeTargets="ResolveAssemblyReferences">
     <Error Condition="'$(GameDir)' == '' Or !Exists('$(GameDir)/BepInEx/core/BepInEx.Unity.IL2CPP.dll')"

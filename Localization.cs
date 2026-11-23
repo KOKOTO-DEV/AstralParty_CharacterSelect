@@ -47,7 +47,8 @@ internal sealed unsafe partial class PanelObserver
                         SystemLanguage.ChineseSimplified => UiLanguage.SimplifiedChinese,
                         _ => UiLanguage.English
                     };
-                if (text.Contains("Select") || text.Contains("Profile") || text.Contains("Confirm"))
+                if ((text.Contains("Select") || text.Contains("Profile") || text.Contains("Confirm")) &&
+                    !text.Any(c => c is >= '\u3040' and <= '\u30ff' or >= '\u4e00' and <= '\u9fff' or >= '\uac00' and <= '\ud7a3'))
                     detectedLanguage = UiLanguage.English;
             }
         }
