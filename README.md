@@ -37,7 +37,7 @@ Steam판 아스트랄 파티의 캐릭터 선택창에서 캐릭터를 태그로
 - [조건 추천 알고리즘, 점수와 긴급 판정](docs/RecommendationAlgorithm.ko.md)
 
   
-<img width="963" height="555" alt="image" src="https://github.com/user-attachments/assets/d922be6d-d662-47bb-ba2f-bfd8b892d85f" /><br />
+<img width="2559" height="1439" alt="image" src="https://github.com/user-attachments/assets/68422ac1-d6a5-4356-ac40-f2e5d775d9d7" /><br />
 - 매치 선택창에서 태그 버튼을 누르면 해당 그룹에서 한 명을 선택합니다. `랜덤`은 태그가 하나라도 달린 선택 가능 캐릭터 전체에서 뽑습니다. 최종 확정은 게임의 확인 버튼으로 합니다.
 - `정렬`을 누르면 자리 우선, 역할 우선, 사용자 지정 태그 순서, 수동 캐릭터 순서가 차례로 바뀝니다.
 - 카드 하단 색 띠는 정렬 기준의 앞 네 태그를 나타냅니다. 여러 색 대상에 해당하면 인원이 가장 적은 태그를 사용하고, 동률이면 정렬 순서를 따릅니다. 수동 모드에서는 사용자 지정 태그 순서로 색을 정합니다.
