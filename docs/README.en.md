@@ -1,4 +1,4 @@
-# Astral Party Character Select 1.2.0
+# Astral Party Character Select 1.3.0
 
 This BepInEx 6 IL2CPP plugin adds character tags, sorting, random picks, and team recommendations to the international Steam edition.
 

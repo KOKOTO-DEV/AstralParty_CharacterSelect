@@ -1,4 +1,4 @@
-# Astral Party Character Select 1.2.0
+# Astral Party Character Select 1.3.0
 
 適用於 Steam 國際版的 BepInEx 6 IL2CPP 外掛，提供標籤、排序、隨機選擇和條件推薦。
 

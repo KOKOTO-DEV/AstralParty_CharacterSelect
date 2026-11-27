@@ -285,7 +285,7 @@ internal sealed unsafe partial class PanelObserver
     private void AddMapDisabledOverlay(IntPtr host, float x, float y, float width, float height)
         => AddMapTileShape(host, x, y, width, height, new Color(0.20f, 0.20f, 0.20f, 0.52f), 0f, Color.clear);
 
-    private void AddMapTileShape(IntPtr host, float x, float y, float width, float height,
+    private IntPtr AddMapTileShape(IntPtr host, float x, float y, float width, float height,
         Color fill, float lineSize, Color line, float radius = 9f)
     {
         var overlay = Create(graphClass);
@@ -295,6 +295,7 @@ internal sealed unsafe partial class PanelObserver
         void** draw = stackalloc void*[7] { &lineSize, &line, &fill, &radius, &radius, &radius, &radius };
         Exact(Call(overlay, "get_shape"), "DrawRoundRect",
             "System.Single,UnityEngine.Color,UnityEngine.Color,System.Single,System.Single,System.Single,System.Single", draw);
+        return overlay;
     }
 
     private IntPtr FindFairyType(string name)

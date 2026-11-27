@@ -1,4 +1,4 @@
-# Astral Party Character Select 1.2.0
+# Astral Party Character Select 1.3.0
 
 Steam国際版向けのBepInEx 6 IL2CPPプラグインです。タグ、並び替え、ランダム選択、チーム推薦を追加します。
 

@@ -18,7 +18,7 @@ public sealed class CharacterSelectPlugin : BasePlugin
 {
     private Harmony? harmony;
     internal const string PluginId = "astral-party.character-select";
-    internal const string PluginVersion = "1.2.0";
+    internal const string PluginVersion = "1.3.0";
     private readonly System.Threading.CancellationTokenSource updateCheck = new();
     private static PanelObserver? observer;
 
@@ -203,6 +203,7 @@ internal sealed unsafe partial class PanelObserver
         if (panel != conditionalPanel)
         {
             conditionalPanel = panel;
+            selectionLoading = false;
             pendingSelection = 0;
             conditionalArmed = false;
             emergencyChecked = false;
@@ -228,9 +229,27 @@ internal sealed unsafe partial class PanelObserver
             return;
         }
         var root = Call(panel, "get_UIObject");
-        if (root == IntPtr.Zero) return;
+        if (selectionLoading) return;
+        var confirm = root == IntPtr.Zero ? IntPtr.Zero : ReadField(root, "btn_SureHero");
+        if (activeRoot == root && root != IntPtr.Zero && UpdateLowPveWarning(root))
+        {
+            selectionLoading = true;
+            Detach();
+            return;
+        }
+        if (!BoolValue(Call(confirm, "get_onStage")) || !BoolValue(Call(confirm, "get_visible")))
+        {
+            if (activeRoot == root && root != IntPtr.Zero) SetSelectionButtonsVisible(false);
+            return;
+        }
         var cards = ReadField(panel, "HeroCardDatas");
         var list = ReadField(root, "list_RendererSelectRole");
+        if (!BoolValue(Call(list, "get_onStage")) || !BoolValue(Call(list, "get_visible")))
+        {
+            if (activeRoot == root) SetSelectionButtonsVisible(false);
+            return;
+        }
+        if (activeRoot == root) SetSelectionButtonsVisible(true);
         var size = IntValue(Call(cards, "get_Count"));
         if (size <= 0 || size > 1000) return;
         var rows = new Dictionary<int, IntPtr>(size);
@@ -293,6 +312,12 @@ internal sealed unsafe partial class PanelObserver
             AddButtons(root, list, bounds);
             activeRoot = root;
             activeList = list;
+            if (UpdateLowPveWarning(root))
+            {
+                selectionLoading = true;
+                Detach();
+                return;
+            }
         }
         selectionScreenWidth = Screen.width;
         selectionScreenHeight = Screen.height;
@@ -336,8 +361,7 @@ internal sealed unsafe partial class PanelObserver
         }
         var label = SelectionButtonLabel(button);
 
-        var confirm = ReadField(root, "btn_SureHero");
-        if (!BoolValue(Call(confirm, "get_onStage")) || !BoolValue(Call(confirm, "get_touchable")))
+        if (!BoolValue(Call(confirm, "get_touchable")))
             return;
         if (conditionalEnabled.Value && button == ConditionButtonIndex)
         {
@@ -440,6 +464,7 @@ internal sealed unsafe partial class PanelObserver
             activeList = IntPtr.Zero;
             sortLabel = IntPtr.Zero;
             recommendationLabel = IntPtr.Zero;
+            Array.Clear(lowPveBorders);
             detailHero = 0;
             Array.Clear(detailGraphs);
             combinationEditor = IntPtr.Zero;
@@ -703,6 +728,7 @@ internal sealed unsafe partial class PanelObserver
             }
             AddChild(root, host);
             container = host;
+            AddLowPveBorders(host, height);
             recommendationLabel = IntPtr.Zero;
             if (conditionalEnabled.Value)
             {

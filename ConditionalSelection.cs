@@ -131,7 +131,8 @@ internal sealed unsafe partial class PanelObserver
                     $"available tagged heroes [{string.Join(", ", candidates)}], " +
                     $"map exclusions [{string.Join(", ", excluded)}], " +
                     $"synergy candidates [{string.Join(", ", ranked.Where(matches.ContainsKey))}], " +
-                    $"map candidates [{string.Join(", ", ranked.Where(id => !matches.ContainsKey(id)))}].");
+                    $"map candidates [{string.Join(", ", ranked.Where(preferred.Contains))}], " +
+                    $"seat candidates [{string.Join(", ", ranked.Where(id => tags.HasTag(id, (HeroTag)slot)))}].");
             }
             var currentRank = advance ? Array.IndexOf(ranked,
                 lastRecommendationAttempt != 0 ? lastRecommendationAttempt : own.Value) : -1;
@@ -142,8 +143,10 @@ internal sealed unsafe partial class PanelObserver
                 var rankLabel = EditorText($"{nextRank + 1}/{ranked.Length} 순위",
                     $"Rank {nextRank + 1}/{ranked.Length}", $"順位 {nextRank + 1}/{ranked.Length}",
                     $"排名 {nextRank + 1}/{ranked.Length}", $"排名 {nextRank + 1}/{ranked.Length}");
-                reason = rankLabel + " · " + (matches.TryGetValue(pick, out var name)
-                    ? name : EditorText("맵 추천", "Map recommendation", "マップ推薦", "地图推荐", "地圖推薦"));
+                reason = rankLabel + " · " + (matches.TryGetValue(pick, out var name) ? name
+                    : preferred.Contains(pick)
+                        ? EditorText("맵 추천", "Map recommendation", "マップ推薦", "地图推荐", "地圖推薦")
+                        : EditorText("자리 추천", "Seat recommendation", "席順推薦", "座位推荐", "座位推薦"));
             }
         }
         if (pick == 0)
@@ -256,11 +259,14 @@ internal sealed unsafe partial class PanelObserver
             }
         }
 
-        return preferred.Where(candidates.Contains).Concat(matches.Keys).Distinct()
-            .OrderByDescending(id => matches.GetValueOrDefault(id)
-                + (preferred.Contains(id) ? 1 : 0)
-                + (tags.HasTag(id, seat) ? 1 : 0))
-            .ThenByDescending(id => matches.GetValueOrDefault(id))
+        var mapRanks = preferred.Select((id, index) => (id, index))
+            .DistinctBy(entry => entry.id).ToDictionary(entry => entry.id, entry => entry.index);
+        var preferredSeatRole = seat is HeroTag.Player1 or HeroTag.Player2 ? HeroTag.Support : HeroTag.Damage;
+        return candidates.Where(id => matches.ContainsKey(id) || mapRanks.ContainsKey(id) || tags.HasTag(id, seat))
+            .OrderByDescending(id => matches.GetValueOrDefault(id))
+            .ThenBy(id => mapRanks.GetValueOrDefault(id, int.MaxValue))
+            .ThenByDescending(id => tags.HasTag(id, seat))
+            .ThenByDescending(id => tags.HasTag(id, seat) && tags.HasTag(id, preferredSeatRole))
             .ToArray();
     }
 
@@ -287,28 +293,35 @@ internal sealed unsafe partial class PanelObserver
 
     private static int[] ReadRoomChoices(IntPtr room, IntPtr self)
     {
+        var ownBar = ReadChoiceBar(room, self);
+        return ReadRoomChoiceBars(room).Where(bar => bar != ownBar)
+            .Select(bar => Call(bar, "get_HeroId", optional: true))
+            .Where(hero => ClassName(hero) == "Int32").Select(IntValue).Where(id => id > 0).ToArray();
+    }
+
+    private static IntPtr[] ReadRoomChoiceBars(IntPtr room)
+    {
         var box = Call(room, "get_Box", optional: true);
-        if (box == IntPtr.Zero) return Array.Empty<int>();
+        if (box == IntPtr.Zero) return Array.Empty<IntPtr>();
         var values = Call(box, "get_Values", optional: true);
         if (values == IntPtr.Zero) values = box;
         var count = Call(values, "get_Count", optional: true);
         if (ClassName(count) != "Int32" || IntValue(count) is < 1 or > 4)
-            return Array.Empty<int>();
-        var ownBar = ReadChoiceBar(room, self);
+            return Array.Empty<IntPtr>();
         var item = FindMethod(IL2CPP.il2cpp_object_get_class(values), "get_Item", "System.Int32");
         // Collection interfaces return a boxed enumerator for value-type implementations.
         var enumerator = item == IntPtr.Zero
             ? Call(values, "System.Collections.IEnumerable.GetEnumerator", optional: true)
             : IntPtr.Zero;
-        if (item == IntPtr.Zero && enumerator == IntPtr.Zero) return Array.Empty<int>();
+        if (item == IntPtr.Zero && enumerator == IntPtr.Zero) return Array.Empty<IntPtr>();
         var enumeratorType = enumerator == IntPtr.Zero ? IntPtr.Zero : IL2CPP.il2cpp_object_get_class(enumerator);
         var moveNext = enumeratorType == IntPtr.Zero ? IntPtr.Zero : FindMethod(enumeratorType, "MoveNext", "");
         var current = enumeratorType == IntPtr.Zero ? IntPtr.Zero :
             FindMethod(enumeratorType, "System.Collections.IEnumerator.get_Current", "");
-        if (item == IntPtr.Zero && (moveNext == IntPtr.Zero || current == IntPtr.Zero)) return Array.Empty<int>();
+        if (item == IntPtr.Zero && (moveNext == IntPtr.Zero || current == IntPtr.Zero)) return Array.Empty<IntPtr>();
         var iterator = enumeratorType != IntPtr.Zero && IL2CPP.il2cpp_class_is_valuetype(enumeratorType)
             ? IL2CPP.il2cpp_object_unbox(enumerator) : enumerator;
-        var result = new List<int>(4);
+        var result = new List<IntPtr>(4);
         for (var index = 0; index < IntValue(count); index++)
         {
             IntPtr bar;
@@ -324,9 +337,7 @@ internal sealed unsafe partial class PanelObserver
                 if (ClassName(next) != "Boolean" || !BoolValue(next)) break;
                 bar = Invoke(current, iterator, null);
             }
-            if (bar == IntPtr.Zero || bar == ownBar) continue;
-            var hero = Call(bar, "get_HeroId", optional: true);
-            if (ClassName(hero) == "Int32" && IntValue(hero) > 0) result.Add(IntValue(hero));
+            result.Add(bar);
         }
         return result.ToArray();
     }
